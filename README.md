@@ -8,6 +8,31 @@ This plugin has been created to allow you to integrate your Loqed Touch smart lo
 
 Please note: This plugin has not currently been tested with multiple LOQED devices but is setup to allow this functionality.
 
+## Building from source
+
+The plugin entry point is `dist/index.js`, which is generated from the TypeScript
+sources. In this directory, run:
+
+```sh
+npm install --include=dev
+```
+
+The `prepare` script automatically runs the build after installation. If the
+dependencies are already installed, or after editing the source, run
+`npm run build` explicitly. Development dependencies are required for the build.
+
+For this repository's Docker setup, you can build with the Node.js installation
+inside the running Homebridge container:
+
+```sh
+docker exec -w /homebridge/node_modules/homebridge-loqed homebridge_running npm install --include=dev
+docker restart homebridge_running
+```
+
+The source directory is bind-mounted into the container, so `dist/index.js` must
+exist in that directory before Homebridge loads the plugin. The declared Node.js
+versions include Node 18.16+ and Node 24.x.
+
 ## Setting up this plugin
 
 When you first add this plugin you will need to go to the [Loqed API Website](https://app.loqed.com), sign in with your Loqed username and password and click 'API' in the top menu.

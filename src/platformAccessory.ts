@@ -152,8 +152,8 @@ export class LoqedPlatformAccessory {
    * REQUIRED - This must return an array of the services you want to expose.
    * This method must be named "getServices".
    */
-  getServices() {
-    return [this.platform.Service.LockMechanism, this.platform.Service.Battery];
+  getServices(): Service[] {
+    return [this.service, this.batteryService];
   }
 
   /**
