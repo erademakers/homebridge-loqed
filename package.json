@@ -29,6 +29,7 @@
     "homebridge-plugin"
   ],
   "dependencies": {
+    "@homebridge/plugin-ui-utils": "^2.2.6",
     "axios": "^1.4.0",
     "body-parser": "^1.20.2",
     "crypto-js": "^4.1.1",

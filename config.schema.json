@@ -51,6 +51,16 @@
         "type": "string",
         "required": true
       }
-    }
-  }
+    },
+    "required": [
+      "name",
+      "localKeyID",
+      "key",
+      "token",
+      "lockID",
+      "bridgeIP"
+    ]
+  },
+  "footerDisplay": "### Full JSON configuration template\n\nThe JSON Config editor starts with only `platform` and `name`. Replace that block with the template below and fill in your lock details, including the actual Local Key ID. Alternatively, use the Settings form. For multiple locks, give every lock its own child bridge using the Homebridge UI Child Bridge settings, as well as a unique `webhookPort`. Each child bridge needs a unique username and HomeKit port. Restart all of Homebridge after adding a lock.\n\n```json\n{\n    \"platform\": \"HomebridgeLoqed\",\n    \"name\": \"Your Lock Name\",\n    \"localKeyID\": 1,\n    \"key\": \"\",\n    \"token\": \"\",\n    \"lockID\": \"\",\n    \"bridgeIP\": \"\",\n    \"webhookPort\": 4567\n}\n```",
+  "customUi": true
 }

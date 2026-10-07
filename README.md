@@ -6,8 +6,8 @@
 
 This plugin has been created to allow you to integrate your Loqed Touch smart lock with homebridge including battery levels and a low battery level warning.
 
-Multiple LOQED locks are supported using one platform configuration and a unique
-webhook port per lock. Automated tests cover separate webhook receivers; testing
+Multiple LOQED locks are supported using one platform configuration, a separate
+child bridge, and a unique webhook port per lock. Automated tests cover separate webhook receivers; testing
 with multiple physical locks is still required.
 
 ## Building from source
@@ -52,6 +52,21 @@ docker compose up -d --no-deps homebridge
 
 Then refresh the Homebridge UI and open the plugin settings.
 
+Use **Settings** to open the plugin's custom configuration form. Click **Add
+lock / Slot toevoegen**, enter the lock details, and click **Save / Opslaan** in
+the form. The plugin automatically assigns every lock without a child bridge a
+unique bridge username and an available HomeKit port. Leave `webhookPort` empty
+to allocate an available webhook port automatically. Existing bridge identities
+and configured ports are preserved when editing.
+
+After saving, restart all of Homebridge, pair each new child bridge with Apple
+Home, and configure each LOQED bridge's webhook URL with the displayed port.
+
+The separate **JSON Config** editor remains a manual editor: it initially creates
+only `platform` and `name`, and does not run the automatic assignment. A complete
+JSON template is shown below that editor; when configuring multiple locks there,
+each block needs its own `_bridge` as illustrated below.
+
 ## Setting up this plugin
 
 When you first add this plugin you will need to go to the [Loqed API Website](https://app.loqed.com), sign in with your Loqed username and password and click 'API' in the top menu.
@@ -80,12 +95,47 @@ Finally, make a note of your Loqed device IP address at the top of this page (It
 
 Using the information created in the last step go back into Homebridge and click 'Settings' for the Homebridge Loqed plugin and add the details from above for each Loqed device you wish to add. The name field on the settings page is the name you wish the device to appear as by default in Homebridge and the Home app.
 
+### Configuration parameters
+
+Sign in at [app.loqed.com](https://app.loqed.com), open the API section, and
+view the API key you added for your lock. Its details contain the values for
+`lockID`, `localKeyID`, `key`, and `token`. Copy these values into the
+corresponding Homebridge configuration fields.
+
+| Parameter | Meaning |
+|---|---|
+| `platform` | Always `"HomebridgeLoqed"`. This identifies the plugin to Homebridge. |
+| `name` | The name of the lock in Homebridge and the Apple Home app, for example `"Front door"`. |
+| `lockID` | The unique ID of your LOQED lock. Copy it from the LOQED API settings. |
+| `localKeyID` | The numeric ID of the API key you created. Use the actual value from LOQED; `1` in the examples is only a placeholder. |
+| `key` | The secret key associated with your LOQED API key. The plugin uses it to sign lock commands. |
+| `token` | The API token used to retrieve the lock status and send commands. |
+| `bridgeIP` | The local IP address of this lock's **LOQED bridge**. The plugin uses it to verify the source of webhook updates. Assign the bridge a fixed IP address where possible. |
+| `webhookPort` | The port on **Homebridge** that receives webhook updates for this lock. Defaults to `4567`; use a unique port for each lock. |
+
+With `"webhookPort": 4567`, configure the outgoing webhook on the corresponding
+LOQED bridge with this URL:
+
+```text
+http://<homebridge-ip>:4567/webhook
+```
+
+The hostname or IP in this URL belongs to **Homebridge**, whereas `bridgeIP`
+belongs to the **LOQED bridge**. For each lock, use its own lock ID, API key
+information, and bridge IP. The port in the webhook URL must match that lock's
+`webhookPort`.
+
 ### Multiple locks
 
-Add a separate `HomebridgeLoqed` platform entry for each lock in Homebridge.
+The custom **Settings** form adds a separate `HomebridgeLoqed` platform entry
+for each lock and automatically fills in missing child bridge settings.
+When editing JSON manually, add a separate entry for each lock yourself.
 Each entry needs its own lock ID, API credentials, bridge IP, and **unique
-`webhookPort`**. This also applies to locks running in separate child bridges or
-Docker containers that use host networking.
+`webhookPort`**. Each lock also needs its own **child bridge** (`_bridge`) with a
+unique `username` and HomeKit `port`: Homebridge allows this dynamic platform only
+once per bridge. Putting both entries on the main bridge causes a "configured
+multiple times" error. Webhook ports must remain unique even across child bridges
+or Docker containers that use host networking.
 
 For example, these two entries can be added to Homebridge's `platforms` array:
 
@@ -99,7 +149,12 @@ For example, these two entries can be added to Homebridge's `platforms` array:
     "key": "FRONT_DOOR_KEY",
     "token": "FRONT_DOOR_TOKEN",
     "bridgeIP": "192.168.4.80",
-    "webhookPort": 4567
+    "webhookPort": 4567,
+    "_bridge": {
+      "username": "0E:37:D7:8B:D9:89",
+      "port": 32776,
+      "name": "Loqed Front door"
+    }
   },
   {
     "platform": "HomebridgeLoqed",
@@ -109,10 +164,20 @@ For example, these two entries can be added to Homebridge's `platforms` array:
     "key": "BACK_DOOR_KEY",
     "token": "BACK_DOOR_TOKEN",
     "bridgeIP": "192.168.4.81",
-    "webhookPort": 4568
+    "webhookPort": 4568,
+    "_bridge": {
+      "username": "0E:37:D7:8B:D9:90",
+      "port": 32777,
+      "name": "Loqed Back door"
+    }
   }
 ]
 ```
+
+The `_bridge.port` is the HomeKit port; it is different from `webhookPort`.
+Choose unused HomeKit ports and unique bridge usernames for your installation.
+After saving, restart all of Homebridge so every platform entry is loaded, then
+pair each child bridge with Apple Home using its Homebridge UI QR code.
 
 Configure the outgoing webhook on each LOQED bridge to match its port:
 
