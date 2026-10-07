@@ -6,7 +6,9 @@
 
 This plugin has been created to allow you to integrate your Loqed Touch smart lock with homebridge including battery levels and a low battery level warning.
 
-Please note: This plugin has not currently been tested with multiple LOQED devices but is setup to allow this functionality.
+Multiple LOQED locks are supported using one platform configuration and a unique
+webhook port per lock. Automated tests cover separate webhook receivers; testing
+with multiple physical locks is still required.
 
 ## Building from source
 
@@ -49,7 +51,9 @@ The webhook from the Loqed bridge allows us to get updates when the lock is unlo
 
 Back on the API page find 'Outgoing Webhooks via LOQED Bridge' and click 'Add/Delete Webhooks'
 
-On the new page create a new webook with the IP address of your Homebridge Raspberry Pi pointing to port 4567 /webhook. Tick all the boxes for trigger
+On the new page create a new webhook with the IP address of your Homebridge host
+pointing to the configured `webhookPort` and `/webhook`. The default port is 4567.
+Tick all the boxes for trigger
 
 e.g. http://192.168.4.79:4567/webhook
 
@@ -58,6 +62,56 @@ Finally, make a note of your Loqed device IP address at the top of this page (It
 ### Configuring Homebridge
 
 Using the information created in the last step go back into Homebridge and click 'Settings' for the Homebridge Loqed plugin and add the details from above for each Loqed device you wish to add. The name field on the settings page is the name you wish the device to appear as by default in Homebridge and the Home app.
+
+### Multiple locks
+
+Add a separate `HomebridgeLoqed` platform entry for each lock in Homebridge.
+Each entry needs its own lock ID, API credentials, bridge IP, and **unique
+`webhookPort`**. This also applies to locks running in separate child bridges or
+Docker containers that use host networking.
+
+For example, these two entries can be added to Homebridge's `platforms` array:
+
+```json
+[
+  {
+    "platform": "HomebridgeLoqed",
+    "name": "Front door",
+    "lockID": "FRONT_DOOR_LOCK_ID",
+    "localKeyID": 1,
+    "key": "FRONT_DOOR_KEY",
+    "token": "FRONT_DOOR_TOKEN",
+    "bridgeIP": "192.168.4.80",
+    "webhookPort": 4567
+  },
+  {
+    "platform": "HomebridgeLoqed",
+    "name": "Back door",
+    "lockID": "BACK_DOOR_LOCK_ID",
+    "localKeyID": 1,
+    "key": "BACK_DOOR_KEY",
+    "token": "BACK_DOOR_TOKEN",
+    "bridgeIP": "192.168.4.81",
+    "webhookPort": 4568
+  }
+]
+```
+
+Configure the outgoing webhook on each LOQED bridge to match its port:
+
+- Front door: `http://192.168.4.79:4567/webhook`
+- Back door: `http://192.168.4.79:4568/webhook`
+
+Replace the example IPs and credentials with your own values. Existing single-lock
+configurations without `webhookPort` continue to use port 4567. Restart Homebridge
+after changing the configuration. If a port is already in use, the plugin logs an
+error identifying the lock and port; choose an available port and update the
+bridge webhook URL accordingly.
+
+### Tests
+
+Run `npm test` to build and exercise the webhook receivers with simulated locks.
+The tests do not contact LOQED or send commands to a physical lock.
 
 ### Support
 

@@ -50,6 +50,14 @@ export class HomeBridgeLoqedPlatform implements DynamicPlatformPlugin {
   }
 
   discoverDevices(config) {
+    const webhookPort = config.webhookPort ?? 4567;
+    if (!Number.isInteger(webhookPort) || webhookPort < 1 || webhookPort > 65535) {
+      this.log.error(
+        `Invalid webhookPort for ${config.name}: expected an integer from 1 to 65535.`,
+      );
+      return;
+    }
+
     // each device has a lockID, name, key and token
     const uuid = this.api.hap.uuid.generate(config.lockID);
 
@@ -61,6 +69,8 @@ export class HomeBridgeLoqedPlatform implements DynamicPlatformPlugin {
       // the accessory already exists
       this.log.info("Restoring existing accessory from cache:", config.name);
 
+      existingAccessory.context.device = config;
+      this.api.updatePlatformAccessories([existingAccessory]);
       new LoqedPlatformAccessory(this, existingAccessory);
     } else {
       // the accessory does not yet exist, so we need to create it

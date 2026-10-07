@@ -4,11 +4,13 @@ import * as CryptoJS from "crypto-js";
 import express from "express";
 import bodyParser from "body-parser";
 import axios from "axios";
+import { Server } from "http";
 
 export class LoqedPlatformAccessory {
   private service: Service;
   private batteryService: Service;
   private app;
+  private server: Server;
 
   private lockStatus = 0; //0 is unlocked, 1 is locked
   private batteryLevel = 100;
@@ -140,8 +142,19 @@ export class LoqedPlatformAccessory {
       res.status(200).send("OK");
     });
 
-    this.app.listen(4567, () => {
-      this.platform.log.info("Lock webhook receiver listening");
+    const webhookPort = this.platform.config.webhookPort ?? 4567;
+    this.server = this.app.listen(webhookPort, () => {
+      this.platform.log.info(
+        `Lock webhook receiver for ${this.platform.config.name} listening on port ${webhookPort}`,
+      );
+    });
+    this.server.on("error", (error: NodeJS.ErrnoException) => {
+      this.platform.log.error(
+        `Cannot start webhook receiver for ${this.platform.config.name} on port ${webhookPort}: ${error.message}. Configure a different webhookPort for each lock.`,
+      );
+    });
+    this.platform.api.on("shutdown", () => {
+      this.server?.close();
     });
 
     // Function to run on first homebridge load to update the device info

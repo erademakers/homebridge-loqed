@@ -38,6 +38,14 @@
         "type": "string",
         "required": true
       },
+      "webhookPort": {
+        "title": "Webhook port (use a different port for each lock)",
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 65535,
+        "default": 4567,
+        "description": "Set the LOQED bridge webhook URL to http://<homebridge-ip>:<webhookPort>/webhook."
+      },
       "bridgeIP": {
         "title": "The IP address of your bridge. This is used to verify hooks that come to your homebridge for security. We recommend you fix you bridges IP on your local network or some functionality may stop working",
         "type": "string",
