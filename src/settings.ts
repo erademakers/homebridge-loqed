@@ -6,4 +6,4 @@ export const PLATFORM_NAME = "HomebridgeLoqed";
 /**
  * This must match the name of your plugin as defined the package.json
  */
-export const PLUGIN_NAME = "homebridge-loqed";
+export const PLUGIN_NAME = "@marktiddy/homebridge-loqed";

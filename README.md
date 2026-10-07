@@ -27,13 +27,30 @@ For this repository's Docker setup, you can build with the Node.js installation
 inside the running Homebridge container:
 
 ```sh
-docker exec -w /homebridge/node_modules/homebridge-loqed homebridge_running npm install --include=dev
+docker exec -w /homebridge/node_modules/@marktiddy/homebridge-loqed homebridge_running npm install --include=dev
 docker restart homebridge_running
 ```
 
 The source directory is bind-mounted into the container, so `dist/index.js` must
 exist in that directory before Homebridge loads the plugin. The declared Node.js
 versions include Node 18.16+ and Node 24.x.
+
+### Homebridge UI configuration
+
+The Docker mount must match the scoped package name:
+`/homebridge/node_modules/@marktiddy/homebridge-loqed`. The UI looks for
+`config.schema.json` under this path. Mounting the plugin at
+`/homebridge/node_modules/homebridge-loqed` allows Homebridge to load it but
+prevents the UI from finding the configuration form.
+
+After changing the volume mapping, recreate the Homebridge container (a restart
+does not apply changed mounts). From this repository's `DockerCompose` directory:
+
+```sh
+docker compose up -d --no-deps homebridge
+```
+
+Then refresh the Homebridge UI and open the plugin settings.
 
 ## Setting up this plugin
 
