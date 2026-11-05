@@ -190,6 +190,27 @@ after changing the configuration. If a port is already in use, the plugin logs a
 error identifying the lock and port; choose an available port and update the
 bridge webhook URL accordingly.
 
+### API logging and status updates
+
+On startup, the plugin retrieves the status using
+`GET https://app.loqed.com/API/lock_status.php`. Subsequent HomeKit status reads
+use the cached state, which is updated by incoming bridge webhooks. Lock and
+unlock commands use `GET https://app.loqed.com/API/lock_command.php`.
+
+Every outgoing LOQED API request and incoming `POST /webhook` is logged at info
+level in the normal Homebridge log, including the HTTP result and elapsed time.
+Outgoing requests include the endpoint, lock ID, and response body, including
+response bodies returned with HTTP errors. Sensitive response fields such as
+tokens and keys, and echoed request tokens or signed commands, are masked.
+Failed requests are logged at warning level.
+Webhook logs include the full incoming URL (protocol, host, port, and path) and
+indicate whether the source matched the configured bridge IP.
+On startup, the plugin also logs a webhook URL for each local, non-loopback IPv4
+address so you can configure LOQED before receiving the first webhook. Choose the
+address reachable by the LOQED bridge; with Docker port mapping, use the host IP
+and published port if these differ from the logged container address and port.
+Rebuild and restart Homebridge after updating the plugin to enable this logging.
+
 ### Tests
 
 Run `npm test` to build and exercise the webhook receivers with simulated locks.

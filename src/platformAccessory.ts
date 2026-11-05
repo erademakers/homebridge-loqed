@@ -3,8 +3,9 @@ import { HomeBridgeLoqedPlatform } from "./platform";
 import * as CryptoJS from "crypto-js";
 import express from "express";
 import bodyParser from "body-parser";
-import axios from "axios";
+import { getLoqed } from "./api";
 import { Server } from "http";
+import { networkInterfaces } from "os";
 
 export class LoqedPlatformAccessory {
   private service: Service;
@@ -70,8 +71,19 @@ export class LoqedPlatformAccessory {
     this.app.use(bodyParser.json());
     this.app.set("trust-proxy", true);
     this.app.post("/webhook", (req, res) => {
+      const started = Date.now();
       const bridgeIP = this.platform.config.bridgeIP;
       const reqIP = req.ip.replace("::ffff:", "");
+      const webhookURL = `${req.protocol}://${req.get("host")}${req.originalUrl}`;
+      this.platform.log.info(
+        `[LOQED webhook] POST ${webhookURL} from ${reqIP} for lock ${this.platform.config.lockID}`,
+      );
+      res.on("finish", () => {
+        const result = bridgeIP === reqIP ? "accepted" : "ignored: source does not match bridgeIP";
+        this.platform.log.info(
+          `[LOQED webhook] POST ${webhookURL} -> HTTP ${res.statusCode}, ${result} (${Date.now() - started} ms)`,
+        );
+      });
 
       if (bridgeIP === reqIP) {
         // The request came from our bridge so we can continue
@@ -147,6 +159,22 @@ export class LoqedPlatformAccessory {
       this.platform.log.info(
         `Lock webhook receiver for ${this.platform.config.name} listening on port ${webhookPort}`,
       );
+      const addresses = new Set<string>();
+      for (const interfaces of Object.values(networkInterfaces())) {
+        for (const address of interfaces ?? []) {
+          if (address.family === "IPv4" && !address.internal) {
+            addresses.add(address.address);
+          }
+        }
+      }
+      if (addresses.size === 0) {
+        addresses.add("<homebridge-ip>");
+      }
+      for (const address of addresses) {
+        this.platform.log.info(
+          `[LOQED webhook] URL for ${this.platform.config.name} (lock ${this.platform.config.lockID}): http://${address}:${webhookPort}/webhook — configure this URL in LOQED using the Homebridge IP reachable by your LOQED bridge`,
+        );
+      }
     });
     this.server.on("error", (error: NodeJS.ErrnoException) => {
       this.platform.log.error(
@@ -174,8 +202,6 @@ export class LoqedPlatformAccessory {
    */
   // This can be UNSECURED, SECURED, JAMMED OR UNKNOWN
   handleLockCurrentStateGet() {
-    this.platform.log.info("Triggered GET LockCurrentState");
-
     let currentValue = 0;
 
     switch (this.lockStatus) {
@@ -229,8 +255,7 @@ export class LoqedPlatformAccessory {
         encodeURIComponent(base64command);
 
       try {
-        const response = await axios.get(finalURL);
-        this.platform.log.debug(JSON.stringify(response.data));
+        await getLoqed(finalURL, this.platform.log);
         this.platform.log.info("Triggered SET LockTargetState:", value);
         let currentValue = this.lockStatus;
 
@@ -250,8 +275,8 @@ export class LoqedPlatformAccessory {
           this.platform.Characteristic.LockCurrentState,
           currentValue,
         );
-      } catch (e) {
-        this.platform.log.warn("Updating lock failed", e);
+      } catch {
+        this.platform.log.warn("Updating lock failed");
       } finally {
         this.handleLockCurrentStateGet;
       }
@@ -270,8 +295,7 @@ export class LoqedPlatformAccessory {
       "&lock_id=" +
       encodeURIComponent(lockID);
 
-    axios
-      .get(finalURL)
+    getLoqed(finalURL, this.platform.log)
       .then((response) => {
         this.batteryService
           .getCharacteristic(this.platform.Characteristic.BatteryLevel)
@@ -289,9 +313,8 @@ export class LoqedPlatformAccessory {
           this.lockStatus = 0;
         }
       })
-      .catch((error) => {
-        // handle error
-        this.platform.log.error(error);
+      .catch(() => {
+        this.platform.log.error("Retrieving initial lock status failed");
       });
   }
 
